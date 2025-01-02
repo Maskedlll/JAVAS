@@ -37,11 +37,12 @@
 
   <script>
     const apiUrl = 'https://pro-ai.glitch.me/api-chat-beta';
-    const ttsUrl = 'https://pro-ai.glitch.me/api-tts';
     const apiKey = '8cbad7db-49b8-45bf-b534-3c5eb4887d0e';
 
     const container = document.getElementById('container');
     let history = [];
+    let userInput = "";
+    let timeout;
 
     // Initialize Speech Recognition
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -63,17 +64,34 @@
     }
 
     // Handle speech recognition result
-    recognition.onresult = async (event) => {
-      const userInput = event.results[0][0].transcript;
+    recognition.onresult = (event) => {
+      userInput = event.results[0][0].transcript;
       container.textContent = `You said: "${userInput}"`;
 
-      // Send message to AI
+      // Clear any existing timeout
+      clearTimeout(timeout);
+
+      // Set a 5-second timeout before sending the message
+      timeout = setTimeout(() => {
+        sendMessageToAI(userInput);
+      }, 5000);
+    };
+
+    recognition.onend = () => {
+      // If the user stops talking for 5 seconds, send the message
+      if (userInput && !timeout) {
+        sendMessageToAI(userInput);
+      }
+    };
+
+    // Send message to AI
+    async function sendMessageToAI(message) {
       const payload = {
-        input: userInput,
-        system: "You are a helpful assistant.",
+        input: message,
+        system: "You are JAVAS, a helpful assistant.",
         history: JSON.stringify(history),
         role: "user",
-        text: userInput,
+        text: message,
       };
 
       try {
@@ -89,15 +107,13 @@
         const data = await response.json();
         const aiResponse = data.response;
 
-        // Update history
-        history.push({ role: 'user', text: userInput });
+        // Update history with both user and AI messages
+        history.push({ role: 'user', text: message });
         history.push({ role: 'assistant', text: aiResponse });
 
         // Show AI response in container
-        container.textContent = `AI: "${aiResponse}"`;
+        container.textContent = `JAVAS: "${aiResponse}"`;
 
-        // Play response using TTS API
-        playTTS(aiResponse);
       } catch (error) {
         console.error('Error communicating with Pro AI:', error);
         container.textContent = "An error occurred. Please try again.";
@@ -105,31 +121,13 @@
 
       // Restart speech recognition
       recognition.start();
-    };
+    }
 
     recognition.onerror = (event) => {
       console.error("Speech recognition error:", event.error);
       container.textContent = "Error with voice recognition. Please try again.";
       recognition.start();
     };
-
-    // Play TTS
-    async function playTTS(text) {
-      try {
-        const response = await fetch(ttsUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text }),
-        });
-
-        const blob = await response.blob();
-        const audioUrl = URL.createObjectURL(blob);
-        const audio = new Audio(audioUrl);
-        audio.play();
-      } catch (error) {
-        console.error('Error with the TTS API:', error);
-      }
-    }
 
     // Start voice chat when page loads
     startVoiceChat();
