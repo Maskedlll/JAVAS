@@ -3,134 +3,72 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pro AI Voice Chat</title>
+  <title>AI Voice Interaction</title>
   <style>
     body {
-      margin: 0;
-      padding: 0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      background: url('https://cdn.dribbble.com/users/1259682/screenshots/16962880/media/6734356060129abb881da81f043846f4.gif') no-repeat center center fixed;
-      background-size: cover;
-    }
-    #container {
-      width: 200px;
-      height: 200px;
-      background-color: #100630;
-      border-radius: 50%;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      color: white;
       font-family: Arial, sans-serif;
+      background-color: #121212;
+      color: white;
       text-align: center;
-      padding: 10px;
-      box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
     }
-    #start-button {
-      position: fixed;
-      bottom: 20px;
-      background-color: white;
-      padding: 10px 20px;
-      border-radius: 5px;
+    button {
+      padding: 15px;
+      font-size: 18px;
       cursor: pointer;
+      background-color: #6200ea;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      margin-top: 20px;
+    }
+    button:hover {
+      background-color: #3700b3;
+    }
+    .status {
+      font-size: 18px;
+      margin-top: 10px;
     }
   </style>
 </head>
 <body>
-  <div id="container">Waiting for your voice...</div>
-  <button id="start-button">Start</button>
+
+  <h1>AI Voice Assistant</h1>
+
+  <button id="startButton">Start Speaking</button>
+  <div id="status" class="status">Waiting for your voice...</div>
 
   <script>
-    const apiUrl = 'https://pro-ai.glitch.me/api-chat-beta';
-    const ttsUrl = 'https://pro-ai.glitch.me/api-tts';
-    const apiKey = '8cbad7db-49b8-45bf-b534-3c5eb4887d0e';
+    // Variables
+    const startButton = document.getElementById("startButton");
+    const statusDiv = document.getElementById("status");
 
-    const container = document.getElementById('container');
-    const startButton = document.getElementById('start-button');
-    let history = [];
-    let recognitionStarted = false;
-
-    // Initialize Speech Recognition
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const recognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.lang = "en-US";
-
-    // Request microphone permissions and start recognition
-    async function startVoiceChat() {
-      try {
-        await navigator.mediaDevices.getUserMedia({ audio: true });
-        container.textContent = "Microphone is ready. Speak now!";
-        recognition.start();
-      } catch (error) {
-        console.error("Microphone permission denied or unavailable:", error);
-        container.textContent = "Microphone access is required to use this feature.";
-      }
-    }
-
-    // Handle speech recognition result
-    recognition.onresult = async (event) => {
-      const userInput = event.results[0][0].transcript;
-      container.textContent = `You said: "${userInput}"`;
-
-      // Send message to AI
-      const payload = {
-        input: userInput,
-        system: "You are a helpful assistant.",
-        history: JSON.stringify(history),
-        role: "user",
-        text: userInput,
-      };
-
-      try {
-        const response = await fetch(apiUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'api-key': apiKey,
-          },
-          body: JSON.stringify(payload),
-        });
-
-        const data = await response.json();
-        const aiResponse = data.response;
-
-        // Update history
-        history.push({ role: 'user', text: userInput });
-        history.push({ role: 'assistant', text: aiResponse });
-
-        // Show AI response in container
-        container.textContent = aiResponse;
-
-        // Play response using TTS API
-        playTTS(aiResponse);
-      } catch (error) {
-        console.error('Error communicating with Pro AI:', error);
-        container.textContent = "An error occurred. Please try again.";
-      }
-
-      // Restart speech recognition if needed
-      recognitionStarted = false;
-    };
-
-    recognition.onerror = (event) => {
-      console.error("Speech recognition error:", event.error);
-      container.textContent = "Error with voice recognition. Please try again.";
-      recognitionStarted = false;
-    };
-
-    // Play TTS
+    const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    
+    // URL de l'API
+    const apiUrlChat = "https://pro-ai.glitch.me/api-chat-beta";
+    const apiUrlTTS = "https://pro-ai.glitch.me/api-tts";
+    
+    // Fonction pour jouer la réponse TTS
     async function playTTS(text) {
+      console.log("Sending text to TTS:", text);  // Log le texte avant l'envoi
+
+      if (!text || text.trim() === "") {
+        console.error("Text is empty or invalid");
+        return;
+      }
+
       try {
-        const response = await fetch(ttsUrl, {
+        const response = await fetch(apiUrlTTS, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ text }),
         });
+
+        if (!response.ok) {
+          throw new Error(`Failed to convert text to speech: ${response.statusText}`);
+        }
 
         const blob = await response.blob();
         const audioUrl = URL.createObjectURL(blob);
@@ -141,13 +79,70 @@
       }
     }
 
-    // Start voice chat on button click
-    startButton.addEventListener('click', () => {
-      if (!recognitionStarted) {
-        startVoiceChat();
-        recognitionStarted = true;
+    // Fonction pour envoyer la voix à l'API chat
+    async function sendToChatAPI(text) {
+      console.log("Sending text to Chat API:", text);
+
+      if (!text || text.trim() === "") {
+        console.error("Text is empty or invalid for chat API");
+        return;
       }
+
+      try {
+        const response = await fetch(apiUrlChat, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to send text to Chat API: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        console.log('Chat API Response:', data);
+        if (data.responseText) {
+          // Si l'API chat répond avec un texte, on le lit via TTS
+          await playTTS(data.responseText);
+        }
+      } catch (error) {
+        console.error('Error with the Chat API:', error);
+      }
+    }
+
+    // Événement au clic pour démarrer la reconnaissance vocale
+    startButton.addEventListener('click', () => {
+      statusDiv.textContent = 'Listening...';
+      recognition.start();
     });
+
+    // Lorsque la reconnaissance vocale trouve du texte
+    recognition.onresult = async (event) => {
+      const transcript = event.results[event.results.length - 1][0].transcript;
+      console.log("Recognized text:", transcript);
+      
+      // Affiche le texte reconnu à l'écran
+      statusDiv.textContent = `You said: ${transcript}`;
+
+      // Envoie le texte à l'API chat
+      await sendToChatAPI(transcript);
+    };
+
+    // Gestion des erreurs
+    recognition.onerror = (event) => {
+      console.error("Speech recognition error:", event.error);
+      statusDiv.textContent = `Error: ${event.error}`;
+    };
+
+    // Permettre à l'utilisateur d'accorder la permission de microphone
+    navigator.mediaDevices.getUserMedia({ audio: true })
+      .then((stream) => {
+        console.log("Microphone access granted.");
+      })
+      .catch((error) => {
+        console.error("Microphone access denied:", error);
+        statusDiv.textContent = "Microphone access denied. Please grant permission.";
+      });
   </script>
 </body>
 </html>
