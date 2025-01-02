@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pro AI Voice Chat</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css?timestamp=1735852388822">
   <style>
     body {
       margin: 0;
@@ -27,22 +28,61 @@
       font-family: Arial, sans-serif;
       text-align: center;
       padding: 10px;
-      box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.0);
       font-size: 18px;
+      overflow: hidden;
+      position: relative;
+    }
+    #textContainer {
+      max-height: 100%;
+      overflow-y: auto;
+      width: 100%;
+    }
+    #micButton {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      border: 2px solid #fff;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+    }
+    #micButton i {
+      font-size: 24px;
+    }
+    .mic-on {
+      color: green;
+      background-color: transparent-green;
+    }
+    .mic-off {
+      color: red;
+      background-color: transparent-red;
     }
   </style>
 </head>
 <body>
-  <div id="container">Waiting for your voice...</div>
+  <div id="container">
+    <div id="textContainer">Waiting for your voice...</div>
+  </div>
+  <button id="micButton" class="mic-on" onclick="toggleMicrophone()">
+    <i class="fa fa-microphone"></i>
+  </button>
 
   <script>
-    const apiUrl = 'https://pro-ai.glitch.me/api-chat';
+    const apiUrl = 'https://pro-ai.glitch.me/api-chat-beta';
     const apiKey = '8cbad7db-49b8-45bf-b534-3c5eb4887d0e';
 
     const container = document.getElementById('container');
+    const textContainer = document.getElementById('textContainer');
+    const micButton = document.getElementById('micButton');
     let history = [];
     let userInput = "";
     let timeout;
+    let isMicrophoneActive = true;
 
     // Initialize Speech Recognition
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -53,32 +93,51 @@
 
     // Request microphone permissions and start recognition
     async function startVoiceChat() {
+      if (!isMicrophoneActive) return; // Don't start if mic is off
+
       try {
         await navigator.mediaDevices.getUserMedia({ audio: true });
-        container.textContent = "Microphone is ready. Speak now!";
+        textContainer.textContent = "Microphone is ready. Speak now!";
         recognition.start();
       } catch (error) {
         console.error("Microphone permission denied or unavailable:", error);
-        container.textContent = "Microphone access is required to use this feature.";
+        textContainer.textContent = "Microphone access is required to use this feature.";
+      }
+    }
+
+    // Toggle microphone on and off
+    function toggleMicrophone() {
+      isMicrophoneActive = !isMicrophoneActive;
+      if (isMicrophoneActive) {
+        micButton.classList.remove('mic-off');
+        micButton.classList.add('mic-on');
+        micButton.innerHTML = '<i class="fa fa-microphone"></i>';
+        startVoiceChat();
+      } else {
+        micButton.classList.remove('mic-on');
+        micButton.classList.add('mic-off');
+        micButton.innerHTML = '<i class="fa fa-microphone-slash"></i>';
+        recognition.stop();
+        textContainer.textContent = "Microphone is off.";
       }
     }
 
     // Handle speech recognition result
     recognition.onresult = (event) => {
       userInput = event.results[0][0].transcript;
-      container.textContent = `${userInput}`;
+      textContainer.textContent = `${userInput}`;
 
       // Clear any existing timeout
       clearTimeout(timeout);
 
-      // Set a 5-second timeout before sending the message
+      // Set a 3-second timeout before sending the message
       timeout = setTimeout(() => {
         sendMessageToAI(userInput);
-      }, 2000);
+      }, 3000);
     };
 
     recognition.onend = () => {
-      // If the user stops talking for 5 seconds, send the message
+      // If the user stops talking for 3 seconds, send the message
       if (userInput && !timeout) {
         sendMessageToAI(userInput);
       }
@@ -99,7 +158,7 @@
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'api-key': apiKey,
+            
           },
           body: JSON.stringify(payload),
         });
@@ -112,20 +171,32 @@
         history.push({ role: 'assistant', text: aiResponse });
 
         // Show AI response in container
-        container.textContent = `JAVAS: ${aiResponse}`;
+        textContainer.textContent = aiResponse;
+
+        // Speak AI response using GTTS API
+        speakResponse(aiResponse);
 
       } catch (error) {
         console.error('Error communicating with Pro AI:', error);
-        container.textContent = "An error occurred. Please try again.";
+        textContainer.textContent = "An error occurred. Please try again.";
       }
 
       // Restart speech recognition
       recognition.start();
     }
 
+    // Speak AI response
+    function speakResponse(text) {
+      const encodedText = encodeURIComponent(text);
+      const audioUrl = `https://gtts-api.miniggiodev.fr/${encodedText}?lang=en`;
+
+      const audio = new Audio(audioUrl);
+      audio.play();
+    }
+
     recognition.onerror = (event) => {
       console.error("Speech recognition error:", event.error);
-      container.textContent = "Error with voice recognition. Please try again.";
+      textContainer.textContent = "Error with voice recognition. Please try again.";
       recognition.start();
     };
 
