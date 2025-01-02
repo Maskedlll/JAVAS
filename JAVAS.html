@@ -29,17 +29,29 @@
       padding: 10px;
       box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
     }
+    #start-button {
+      position: fixed;
+      bottom: 20px;
+      background-color: white;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
   <div id="container">Waiting for your voice...</div>
+  <button id="start-button">Start</button>
+
   <script>
     const apiUrl = 'https://pro-ai.glitch.me/api-chat-beta';
     const ttsUrl = 'https://pro-ai.glitch.me/api-tts';
     const apiKey = '8cbad7db-49b8-45bf-b534-3c5eb4887d0e';
 
     const container = document.getElementById('container');
+    const startButton = document.getElementById('start-button');
     let history = [];
+    let recognitionStarted = false;
 
     // Initialize Speech Recognition
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -101,14 +113,14 @@
         container.textContent = "An error occurred. Please try again.";
       }
 
-      // Restart speech recognition
-      recognition.start();
+      // Restart speech recognition if needed
+      recognitionStarted = false;
     };
 
     recognition.onerror = (event) => {
       console.error("Speech recognition error:", event.error);
       container.textContent = "Error with voice recognition. Please try again.";
-      recognition.start();
+      recognitionStarted = false;
     };
 
     // Play TTS
@@ -129,8 +141,13 @@
       }
     }
 
-    // Start voice chat when page loads
-    startVoiceChat();
+    // Start voice chat on button click
+    startButton.addEventListener('click', () => {
+      if (!recognitionStarted) {
+        startVoiceChat();
+        recognitionStarted = true;
+      }
+    });
   </script>
 </body>
 </html>
