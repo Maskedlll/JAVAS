@@ -36,7 +36,7 @@
   <div id="container">Waiting for your voice...</div>
 
   <script>
-    const apiUrl = 'https://pro-ai.glitch.me/api-chat-beta';
+    const apiUrl = 'https://pro-ai.glitch.me/api-chat';
     const apiKey = '8cbad7db-49b8-45bf-b534-3c5eb4887d0e';
 
     const container = document.getElementById('container');
@@ -66,7 +66,7 @@
     // Handle speech recognition result
     recognition.onresult = (event) => {
       userInput = event.results[0][0].transcript;
-      container.textContent = `"${userInput}"`;
+      container.textContent = `${userInput}`;
 
       // Clear any existing timeout
       clearTimeout(timeout);
@@ -112,7 +112,7 @@
         history.push({ role: 'assistant', text: aiResponse });
 
         // Show AI response in container
-        container.textContent = `JAVAS: "${aiResponse}"`;
+        container.textContent = `JAVAS: ${aiResponse}`;
 
       } catch (error) {
         console.error('Error communicating with Pro AI:', error);
