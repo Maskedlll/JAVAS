@@ -1,6 +1,6 @@
 # About
 #### About me
-- 👋 Hi, I’m @Maskedlll
+- 👋 Hi, I’m **@Maskedlll**
 - 👀 I’m interested in coding for a long time...
 - 🌱 I’m currently learning Python
 - 😄 Pronouns: He/Him
